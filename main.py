@@ -1,4 +1,6 @@
 import pygame
+# see answer #2 https://stackoverflow.com/questions/20842801/how-to-display-text-in-pygame
+import pygame.freetype
 import math
 import random
 
@@ -12,29 +14,36 @@ screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Ayo whats good its space invaders")
 pygame.display.set_icon(icon)
 
+scoreFont = pygame.freetype.Font("Bungee-Regular.ttf", size=35)
+
 PlayerImg = pygame.image.load('s.png')
 PlayerX = 368
 PlayerY = 500
 PlayerX_change = 0
 
 enemyImg = pygame.image.load('alienimg.png').convert()
-surface = pygame.transform.scale(enemyImg, (40, 40))
-surface.set_colorkey((0, 0, 0))
+enemyImg = pygame.transform.scale(enemyImg, (40, 40))
+enemyImg.set_colorkey((0, 0, 0))
 
+# Instead of storing an array for each property of the
+# enemy, you can create an enemy class
+class Enemy:
+    def __init__(self, X, Y, DeltaX, DeltaY): # constructor
+        self.X = X
+        self.Y = Y
+        self.DeltaX = DeltaX
+        self.DeltaY = DeltaY
+        # Note image is not stored because all enemies have the same image (at leaast for now)
 
-EnemyImg = []
-EnemyX = []
-EnemyY = []
-EnemyX_change = []
-EnemyY_change = []
+EnemyArr = []
 number_enemies = 6
 
-for counter in range(number_enemies):
-    EnemyImg.append(surface)
-    EnemyX.append(random.randrange(0, 860))
-    EnemyY.append(random.randrange(0, 150))
-    EnemyX_change.append(0.15)
-    EnemyY_change.append(40)
+for _ in range(number_enemies):
+    newX = random.randrange(0, 860)
+    newY = random.randrange(0, 150)
+
+    EnemyArr += [ Enemy(newX, newY, 0.15, 40) ]
+
 
 # BulletState release means that the bullet is out there
 BulletImg = pygame.image.load('bullet.png')
@@ -57,12 +66,18 @@ for i in range(num_asteroids):
     asteroid_list.append([AsteroidX, AsteroidY])
 
 
-def player(x, y):
+def drawPlayer(x, y):
     screen.blit(PlayerImg, (x, y))
 
 
-def enemy(x, y, count):
-    screen.blit(EnemyImg[count], (x, y))
+def drawEnemy(x, y):
+    screen.blit(enemyImg, (x, y))
+
+
+def drawScore():
+    '''Score is always in the same place and the same variable so no params'''
+    global Bruh
+    scoreFont.render_to(screen, (10, 10), "Score: " + str(Bruh), (155, 200, 255))
 
 
 def fire_bullet(x, y):
@@ -74,22 +89,19 @@ def fire_bullet(x, y):
 def calcdistance(x1, y1, x2, y2):
     distance = math.sqrt(math.pow((x1 - x2), 2) + math.pow((y1 - y2), 2))
 
-    if distance < 25:
-        return True
-    else:
-        return False
+    # distance < 25 is already a boolean
+    # so you can just return it
+    return distance < 25
 
 
 def asteroid_collision(asteroid_rec, player_rec):
-    if asteroid_rec.colliderect(player_rec):
-        return True
-    else:
-        return False
+    return asteroid_rec.colliderect(player_rec)
 
 
-Condition = True
+# Here's a better name
+ContinueGame = True
 
-while Condition:
+while ContinueGame:
     Player_coords = (PlayerX, PlayerY, 32, 32)
     Player_rect = pygame.draw.rect(screen, (0, 0, 0), Player_coords, 1)
 
@@ -99,7 +111,7 @@ while Condition:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            Condition = False
+            ContinueGame = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
                 PlayerX_change = 0.8
@@ -117,30 +129,36 @@ while Condition:
     if PlayerX > 768 or PlayerX < 0:
         PlayerX_change = 0
 
-    for counter in range(number_enemies):
-        EnemyX[counter] += EnemyX_change[counter]
-        if EnemyX[counter] > 768:
-            EnemyX_change[counter] = -initialChange
-            EnemyY[counter] += EnemyY_change[counter]
+    # Ahh, because we used a class instead of parallel arrays
+    # we don't need to track index
+    for Enemy in EnemyArr:
+        Enemy.X += Enemy.DeltaX
+
+        if Enemy.X > 768:
+            Enemy.DeltaX = -initialChange
             initialChange += 0.0025
-        if EnemyX[counter] < 0:
-            EnemyX_change[counter] = initialChange
-            EnemyY[counter] += EnemyY_change[counter]
+            Enemy.X = 768
+            Enemy.Y += Enemy.DeltaY
+        elif Enemy.X < 0:
+            Enemy.DeltaX = initialChange
             initialChange += 0.0025
-        if calcdistance(EnemyX[counter], EnemyY[counter], BulletX, BulletY):
+            Enemy.Y += Enemy.DeltaY
+            Enemy.X = 0
+
+        if calcdistance(Enemy.X, Enemy.Y, BulletX, BulletY):
             BulletState = "charge"
             BulletY = 480
-            EnemyX[counter] = random.randrange(0, 767)
-            EnemyY[counter] = random.randrange(0, 50)
+            Enemy.X = random.randrange(0, 767)
+            Enemy.Y = random.randrange(0, 50)
             Bruh += 1
 
-        if EnemyY[counter] > 282:
-            EnemyY[counter] = 278
+        if Enemy.Y > 282:
+            Enemy.Y = 278
             print('GAME OVER!')
             print('Your final score was ', Bruh)
-            Condition = False
+            ContinueGame = False
 
-        enemy(EnemyX[counter], EnemyY[counter], counter)
+        drawEnemy(Enemy.X, Enemy.Y)
 
     for i in range(len(asteroid_list)):
 
@@ -158,10 +176,10 @@ while Condition:
             asteroid_list[i][0] = AsteroidX
 
         if asteroid_collision(Asteroid_rect, Player_rect):
-            EnemyY[counter] = 2000
+            Enemy.Y = 2000
             print('GAME OVER!')
             print('Your final score was ', Bruh)
-            Condition = False
+            ContinueGame = False
 
     if BulletY < 0:
         BulletState = "charge"
@@ -171,7 +189,8 @@ while Condition:
         BulletY -= BulletY_change
         fire_bullet(BulletX, BulletY)
 
-    player(PlayerX, PlayerY)
+    drawPlayer(PlayerX, PlayerY)
+    drawScore()
     clock.tick(800)
 
     pygame.display.update()
