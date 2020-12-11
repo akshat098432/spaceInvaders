@@ -1,4 +1,6 @@
 import pygame
+# see answer #2 https://stackoverflow.com/questions/20842801/how-to-display-text-in-pygame
+import pygame.freetype
 import math
 import random
 
@@ -11,6 +13,8 @@ background = pygame.image.load('stars_universe_space_118205_800x600.jpg')
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Ayo whats good its space invaders")
 pygame.display.set_icon(icon)
+
+scoreFont = pygame.freetype.Font("Bungee-Regular.ttf", size=35)
 
 PlayerImg = pygame.image.load('s.png')
 PlayerX = 368
@@ -70,6 +74,12 @@ def drawEnemy(x, y):
     screen.blit(enemyImg, (x, y))
 
 
+def drawScore():
+    '''Score is always in the same place and the same variable so no params'''
+    global Bruh
+    scoreFont.render_to(screen, (10, 10), "Score: " + str(Bruh), (155, 200, 255))
+
+
 def fire_bullet(x, y):
     global BulletState
     BulletState = "release"
@@ -126,12 +136,14 @@ while ContinueGame:
 
         if Enemy.X > 768:
             Enemy.DeltaX = -initialChange
-            Enemy.Y += Enemy.DeltaY
             initialChange += 0.0025
+            Enemy.X = 768
+            Enemy.Y += Enemy.DeltaY
         elif Enemy.X < 0:
             Enemy.DeltaX = initialChange
-            Enemy.Y += Enemy.DeltaY
             initialChange += 0.0025
+            Enemy.Y += Enemy.DeltaY
+            Enemy.X = 0
 
         if calcdistance(Enemy.X, Enemy.Y, BulletX, BulletY):
             BulletState = "charge"
@@ -178,6 +190,7 @@ while ContinueGame:
         fire_bullet(BulletX, BulletY)
 
     drawPlayer(PlayerX, PlayerY)
+    drawScore()
     clock.tick(800)
 
     pygame.display.update()
